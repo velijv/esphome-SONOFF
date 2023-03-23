@@ -35,6 +35,7 @@ easily [install my projects onto your devices](https://git.veli.ee/esphome-proje
 8. Tuya S06 IR Controller
 9. Zemismart WF25S Roller Shade
 10. LILYGO®TTGO T-Higrow
+11. Xiaomi Philips Zhirui Downlight
 11. ... more
 
 *** 
