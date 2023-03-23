@@ -1,7 +1,6 @@
 # CHANGEME: Set these variable to your liking
 title: ESPHome Projects by [Veli](https://veli.ee)/[git](https://github.com/velijv)
 description: Powered by ESPHome and ESP Web Tools
-theme: hacker
 remote_theme: pages-themes/hacker@v0.2.0
 plugins:
 - jekyll-remote-theme # add this line to the plugins list if you already have one
