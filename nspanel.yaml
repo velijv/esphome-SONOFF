@@ -24,7 +24,7 @@ substitutions:
   hass_sensor_humidity: 'sensor.humidity' # indoor humidity for index screen
   hass_weather: 'weather.home' # weather entity to get the conditon icon
 
-  hass_sensor.weather: 'sensor.weather' # see below
+  hass_sensor_weather: 'sensor.weather' # see below
 # You must create a template sensor in Home Assistant to grab the weather attributes
 
 # template: 
@@ -65,6 +65,55 @@ logger:
 
 # API is a requirement of the dashboard import.
 api:
+  id: api_id
+  services:
+    - service: set_ledc_frequency
+      variables:
+        my_frequency: float
+      then:
+        - output.turn_on: ${device_name}_buzzer_out
+        - output.ledc.set_frequency:
+            id: ${device_name}_buzzer_out
+            frequency: !lambda "return my_frequency;"
+
+    - service: set_output_level
+      variables:
+        my_level: float
+      then:
+        - output.turn_on: ${device_name}_buzzer_out
+        - output.set_level:
+            id: ${device_name}_buzzer_out
+            level: !lambda "return my_level;"
+
+    - service: send_json
+      variables:
+        my_type: int
+        my_json: string
+      then:
+        - lambda: 'id(ns_panel).send_json_command(my_type,my_json);'
+        # JSON commands list: 
+        # https://blakadder.github.io/nspanel/ 
+        # https://blakadder.com/nspanel-hacking/
+        # https://gist.github.com/blakadder/7928279bd95ad47b54f705b7a121a7e1
+        # https://github.com/blakadder/nspanel/blob/main/nextion-objects-readtext.txt
+
+    - service: play_rtttl
+      variables:
+        song_str: string
+      then:
+        - output.turn_on: ${device_name}_buzzer_out
+        - rtttl.play:
+            rtttl: !lambda "return song_str;"
+        - output.turn_off: ${device_name}_buzzer_out
+
+    - service: weather_data
+      variables:
+        icon: int
+        temperature: int
+        min: int
+        max: int
+      then:
+        - lambda: id(ns_panel).send_weather_data((nspanel::WeatherIcon)icon, temperature, min, max);
 
 # OTA is required for Over-the-Air updating
 ota:
@@ -134,18 +183,6 @@ time:
   - platform: sntp
     id: sntp_time
     timezone: Europe/Tallinn    
-
-logger:
-  baud_rate: 0  
-  level: DEBUG
-  logs:
-    resistance: WARN
-    sensor: WARN    
-    text_sensor: WARN        
-    ntc: WARN        
-    homeassistant: WARN        
-    sntp: WARN        
-    json: WARN
 
 uart:
   tx_pin: 16
@@ -427,57 +464,6 @@ rtttl:
   on_finished_playback:
     -  output.turn_off: ${device_name}_buzzer_out
 
-api:
-  id: api_id
-  services:
-    - service: set_ledc_frequency
-      variables:
-        my_frequency: float
-      then:
-        - output.turn_on: ${device_name}_buzzer_out
-        - output.ledc.set_frequency:
-            id: ${device_name}_buzzer_out
-            frequency: !lambda "return my_frequency;"
-
-    - service: set_output_level
-      variables:
-        my_level: float
-      then:
-        - output.turn_on: ${device_name}_buzzer_out
-        - output.set_level:
-            id: ${device_name}_buzzer_out
-            level: !lambda "return my_level;"
-
-    - service: send_json
-      variables:
-        my_type: int
-        my_json: string
-      then:
-        - lambda: 'id(ns_panel).send_json_command(my_type,my_json);'
-        # JSON commands list: 
-        # https://blakadder.github.io/nspanel/ 
-        # https://blakadder.com/nspanel-hacking/
-        # https://gist.github.com/blakadder/7928279bd95ad47b54f705b7a121a7e1
-        # https://github.com/blakadder/nspanel/blob/main/nextion-objects-readtext.txt
-
-    - service: play_rtttl
-      variables:
-        song_str: string
-      then:
-        - output.turn_on: ${device_name}_buzzer_out
-        - rtttl.play:
-            rtttl: !lambda "return song_str;"
-        - output.turn_off: ${device_name}_buzzer_out
-
-    - service: weather_data
-      variables:
-        icon: int
-        temperature: int
-        min: int
-        max: int
-      then:
-        - lambda: id(ns_panel).send_weather_data((nspanel::WeatherIcon)icon, temperature, min, max);
-
 number: 
   - platform: template
     entity_category: config      
@@ -624,7 +610,15 @@ button:
       then: # Initiliase Factory Test Mode
         - lambda: |-
             id(ns_panel).send_json_command(0x80, "{\"queryInfo\":\"factory\"}");
-  
+
+  - platform: restart
+    name: Restart
+    icon: mdi:restart
+    id: ${device_name}_restart # id addded for nspanel stock
+    device_class: restart
+    entity_category: diagnostic
+    disabled_by_default: true
+
 binary_sensor:
 # NS Panel Hard Switches
   - platform: gpio
@@ -874,7 +868,7 @@ sensor:
   - platform: homeassistant
     id: hass_weather_forecast_high
     name: Weather forecast high
-    entity_id: $hass_sensor.weather
+    entity_id: $hass_sensor_weather
     attribute: forecast_high
     internal: true
     on_value:
@@ -885,7 +879,7 @@ sensor:
   - platform: homeassistant
     id: hass_weather_forecast_low
     name: Weather forecast low
-    entity_id: $hass_sensor.weather
+    entity_id: $hass_sensor_weather
     attribute: forecast_low
     internal: true
     on_value:
