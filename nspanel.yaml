@@ -1,0 +1,1177 @@
+# These substitutions allow the end user to override certain values
+substitutions:
+  friendly_name: 'NSPanel'
+  device_name: 'nspanel'
+  node_name: 'nspanel'  
+  device_description: 'SONOFF NSPanel - stock TFT firmware 1.4.0 -  WiFi, BT, HMI touch'
+  project_base: 'SONOFF'
+  project_name: 'NSPanel86'
+
+##########################################################
+# Home assistant entities exposed to NSPanel
+# replace these with your own
+##########################################################
+  hass_light_white: 'light.corridor'
+  hass_light_rgb_01: 'light.balcony' 
+  hass_light_rgb_02: 'light.twinkly' 
+  hass_plug_01: 'switch.gate'
+  hass_plug_grouped_01: 'switch.click_and_grow'
+  hass_plug_grouped_02: 'switch.daylight'
+  hass_cover_01: 'cover.shade'
+  hass_scene: 'scene.night'
+  hass_climate: 'climate.livingroom'  
+
+  hass_sensor_humidity: 'sensor.humidity' # indoor humidity for index screen
+  hass_weather: 'weather.home' # weather entity to get the conditon icon
+
+  hass_sensor.weather: 'sensor.weather' # see below
+# You must create a template sensor in Home Assistant to grab the weather attributes
+
+# template: 
+#   - sensor:
+#     - unique_id: weather    
+#       name: Weather
+#       state: >-
+#         {{ states('weather.home') | replace('_',' ') | capitalize }}  
+#       attributes:
+#         forecast_high: >-                 
+#           {{ states.weather.home.attributes.forecast[0].temperature }}
+#         forecast_low: >-                 
+#           {{ states.weather.home.attributes.forecast[0].templow }}  
+
+##########################################################
+# /end customizing
+##########################################################  
+
+esphome:
+  name: $device_name
+  comment: $device_description
+  friendly_name: $friendly_name
+  # Automatically add the mac address to the name
+  # so you can use a single firmware for all devices
+  name_add_mac_suffix: true
+
+  # This will allow for (future) project identification,
+  # configuration and updates.
+  project:
+    name: ${project_base}.${project_name}
+    version: "1.4.0"
+
+esp32:
+  board: esp32dev
+
+# To be able to get logs from the device via serial and api.
+logger:
+
+# API is a requirement of the dashboard import.
+api:
+
+# OTA is required for Over-the-Air updating
+ota:
+
+# This should point to the public location of this yaml file.
+dashboard_import:
+  package_import_url: github://velijv/esphome-project-template/nspanel.yaml@main
+
+wifi:
+  # Set up a wifi access point using the device name above
+  ap:
+    ssid: ${friendly_name}
+    password: "12345678"
+
+# In combination with the `ap` this allows the user
+# to provision wifi credentials to the device.
+captive_portal:
+
+##########################################################
+# Most projects should not remove anything from above here
+# and should just modify the name, project name/version 
+# and git url for the dashboard_import
+##########################################################
+
+# Sets up Bluetooth LE (Only on ESP32) to allow the user
+# to provision wifi credentials to the device.
+esp32_improv:
+  authorizer: none
+
+# Sets up the improv via serial client for Wi-Fi provisioning.
+# Handy if your device has a usb port for the user to add credentials when they first get it.
+improv_serial:
+
+#################################################################################################
+# Before installation, you must add some configs in your Home Assistant: 
+#################################################################################################
+
+# https://github.com/DeanoXX/esphome-config/blob/main/homeassistant_service.yaml
+# ESPHome cant send the RGB values as an array so need an interim script.
+
+# script: 
+#   set_light_on_rgb:
+#     alias: NSPanel ESPHome RGB light set
+#     sequence:
+#     - service: light.turn_on
+#       target:
+#         entity_id: '{{ entity_name }}'
+#       data_template:
+#         brightness: '{{ brightness }}'
+#         rgb_color:
+#         - '{{ red }}'
+#         - '{{ green }}'
+#         - '{{ blue }}'
+
+#################################################################################################
+# the NSPanel component: 
+#################################################################################################
+
+# https://github.com/esphome/esphome/pull/2702
+
+external_components:
+  - source: github://pr#2702
+    components: ["nspanel"]
+    refresh: 0s
+
+time:
+  - platform: sntp
+    id: sntp_time
+    timezone: Europe/Tallinn    
+
+logger:
+  baud_rate: 0  
+  level: DEBUG
+  logs:
+    resistance: WARN
+    sensor: WARN    
+    text_sensor: WARN        
+    ntc: WARN        
+    homeassistant: WARN        
+    sntp: WARN        
+    json: WARN
+
+uart:
+  tx_pin: 16
+  rx_pin: 17
+  baud_rate: 115200
+
+# NSPanel Component for access to panel.
+# Updates temperature, date, time, Relay indicators
+# Provides JSON interface to panel
+nspanel:
+  id: ns_panel
+  time_id: sntp_time
+  temperature: ${device_name}_temperature
+  eco_mode_switch: ${device_name}_eco_mode
+  screen_power_switch: ${device_name}_screen_power
+  relays:
+    - ${device_name}_relay_1
+    - ${device_name}_relay_2
+  on_json_message:      
+    then:
+      # Widget 1 (type:0x86 id:hass_light_white) 
+      - if:
+          condition:
+            lambda: 'return (type == 0x86 && root.containsKey("id") && strcasecmp(root["id"], "hass_light_white") == 0);'
+          then:
+            - if:
+                condition:
+                  lambda: 'return (root["params"].containsKey("switch") && root["params"]["switch"] == "on");'
+                then:
+                  - homeassistant.service:
+                      service: light.turn_on
+                      data:
+                        entity_id: $hass_light_white
+            - if:
+                condition:
+                  lambda: 'return (root["params"].containsKey("switch") && root["params"]["switch"] == "off");'
+                then:
+                  - homeassistant.service:
+                      service: light.turn_off
+                      data:
+                        entity_id: $hass_light_white
+            - if:
+                condition:
+                  lambda: 'return (root["params"].containsKey("white"));'
+                then:
+                  - homeassistant.service:
+                      service: light.turn_on
+                      data:
+                        entity_id: $hass_light_white
+                        brightness: !lambda 'return int(root["params"]["white"]["br"].as<float>() / 100 * 255);'
+
+      # Widget 2 (type:0x86 id:light_rgb_01) 
+      - if:
+          condition:
+            lambda: 'return (type == 0x86 && root.containsKey("id") && strcasecmp(root["id"], "light_rgb_01") == 0);'
+          then:
+            - if:
+                condition:
+                  lambda: 'return (root["params"].containsKey("switch") && root["params"]["switch"] == "on" && !root["params"].containsKey("bright"));'
+                then:
+                  - homeassistant.service:
+                      service: light.turn_on
+                      data:
+                        entity_id: $hass_light_rgb_01
+            - if:
+                condition:
+                  lambda: 'return (root["params"].containsKey("switch") && root["params"]["switch"] == "off");'
+                then:
+                  - homeassistant.service:
+                      service: light.turn_off
+                      data:
+                        entity_id: $hass_light_rgb_01
+            - if:
+                condition:
+                  lambda: 'return (root["params"].containsKey("bright"));'
+                then:
+                  - homeassistant.service:
+                      service: script.set_light_on_rgb
+                      data:
+                        entity_name: $hass_light_rgb_01
+                        brightness: !lambda 'return int(root["params"]["bright"].as<float>() / 100 * 255);'
+                        red: !lambda 'return root["params"]["colorR"].as<int>();'
+                        green: !lambda 'return root["params"]["colorG"].as<int>();'
+                        blue: !lambda 'return root["params"]["colorB"].as<int>();'
+      # Widget 3 (type:0x86 id:light_rgb_02) 
+      - if:
+          condition:
+            lambda: 'return (type == 0x86 && root.containsKey("id") && strcasecmp(root["id"], "light_rgb_02") == 0);'
+          then:
+            - if:
+                condition:
+                  lambda: 'return (root["params"].containsKey("switch") && root["params"]["switch"] == "on" && !root["params"].containsKey("bright"));'
+                then:
+                  - homeassistant.service:
+                      service: light.turn_on
+                      data:
+                        entity_id: $hass_light_rgb_02
+            - if:
+                condition:
+                  lambda: 'return (root["params"].containsKey("switch") && root["params"]["switch"] == "off");'
+                then:
+                  - homeassistant.service:
+                      service: light.turn_off
+                      data:
+                        entity_id: $hass_light_rgb_02
+            - if:
+                condition:
+                  lambda: 'return (root["params"].containsKey("bright"));'
+                then:
+                  - homeassistant.service:
+                      service: script.set_light_on_rgb
+                      data:
+                        entity_name: $hass_light_rgb_02
+                        brightness: !lambda 'return int(root["params"]["bright"].as<float>() / 100 * 255);'
+                        red: !lambda 'return root["params"]["colorR"].as<int>();'
+                        green: !lambda 'return root["params"]["colorG"].as<int>();'
+                        blue: !lambda 'return root["params"]["colorB"].as<int>();'                        
+
+      # Widget 4 (type:0x86 id:plug_01) 
+      - if:
+          condition:
+            lambda: 'return (type == 0x86 && root.containsKey("id") && strcasecmp(root["id"], "hass_plug_01") == 0);'
+          then:
+            - if:
+                condition:
+                  lambda: 'return (root["params"].containsKey("switch") && root["params"]["switch"] == "on");'
+                then:
+                  - homeassistant.service:
+                      service: switch.turn_on
+                      data:
+                        entity_id: $hass_plug_01 
+            - if:
+                condition:
+                  lambda: 'return (root["params"].containsKey("switch") && root["params"]["switch"] == "off");'
+                then:
+                  - homeassistant.service:
+                      service: switch.turn_off
+                      data:
+                        entity_id: $hass_plug_01 
+
+      # Widget 5 (type:0x86 id:group_01 = plug_2 + plug_03) 
+      - if:
+          condition:
+            lambda: 'return (type == 0x86 && root.containsKey("id") && strcasecmp(root["id"], "group_01") == 0);'
+          then:
+            - if:
+                condition:
+                  lambda: 'return (root["params"].containsKey("switches") && root["params"]["switches"][0]["switch"] == "on");'
+                then:
+                  - homeassistant.service:
+                      service: switch.turn_on
+                      data:
+                        entity_id: $hass_plug_grouped_01
+            - if:
+                condition:
+                  lambda: 'return (root["params"].containsKey("switches") && root["params"]["switches"][0]["switch"] == "off");'
+                then:
+                  - homeassistant.service:
+                      service: switch.turn_off
+                      data:
+                        entity_id: $hass_plug_grouped_01
+            - if:
+                condition:
+                  lambda: 'return (root["params"].containsKey("switches") && root["params"]["switches"][1]["switch"] == "on");'
+                then:
+                  - homeassistant.service:
+                      service: switch.turn_on
+                      data:
+                        entity_id: $hass_plug_grouped_02
+            - if:
+                condition:
+                  lambda: 'return (root["params"].containsKey("switches") && root["params"]["switches"][1]["switch"] == "off");'
+                then:
+                  - homeassistant.service:
+                      service: switch.turn_off
+                      data:
+                        entity_id: $hass_plug_grouped_02
+
+      # Widget 6 (type:0x86 id:cover_1) 
+      - if:
+          condition:
+            lambda: 'return (type == 0x86 && root.containsKey("id") && strcasecmp(root["id"], "hass_cover_01") == 0);'
+          then:
+            - if:
+                condition:
+                  lambda: 'return (root["params"].containsKey("switch") && root["params"]["switch"] == "on");'
+                then:
+                  - homeassistant.service:
+                      service: cover.open_cover
+                      data:
+                        entity_id: $hass_cover_01
+            - if:
+                condition:
+                  lambda: 'return (root["params"].containsKey("switch") && root["params"]["switch"] == "off");'
+                then:
+                  - homeassistant.service:
+                      service: cover.close_cover
+                      data:
+                        entity_id: $hass_cover_01
+            - if:
+                condition:
+                  lambda: 'return (root["params"].containsKey("switch") && root["params"]["switch"] == "pause");'
+                then:
+                  - homeassistant.service:
+                      service: cover.stop_cover
+                      data:
+                        entity_id: $hass_cover_01
+            - if:
+                condition:
+                  lambda: 'return (root["params"].containsKey("setclose"));'
+                then:
+                  - homeassistant.service:
+                      service: input_number.set_value
+                      data:
+                        entity_id: input_number.cover_1_pos
+                        value: !lambda 'return 100 - root["params"]["setclose"].as<int>();'
+
+      # Widget 7 (type:0x86 scene:song) 
+      - if:
+          condition:
+            lambda: 'return (type == 0x86 && root.containsKey("id") && strcasecmp(root["id"], "song") == 0);'
+          then:
+            - rtttl.play:
+                rtttl: 'Lamourt:d=4,o=5,b=160:4f#, 4p, 4f#, 8f#, 8d6, 4c#6, 4p, 4c#6, 8c#6, 8d6, 4b, 4p, 4b, 8b, 8a, 4b, 8b, 8a, 8b, 8a, 8b, 8a, 4f#'
+
+      # Widget 8 - Scene Sleep
+      # lambda: 'return (type == 0x86 && root.containsKey("id") && strcasecmp(root["id"], "scene_sleep") == 0);'
+      - if:
+          condition:
+            lambda: 'return (type == 0x86 && root.containsKey("id") && strcasecmp(root["id"], "scene_sleep") == 0);'
+          then:
+            - homeassistant.service:
+                service: scene.turn_on
+                data:
+                  entity_id: $hass_scene
+
+      # Thermostat (type:0x84) 
+      - if:
+          condition:
+            lambda: 'return (type == 0x84);'
+          then:
+            - if:
+                condition:
+                  lambda: 'return (root.containsKey("ATCEnable") && root["ATCEnable"] == 1);'
+                then:
+                  - homeassistant.service:
+                      service: climate.turn_on
+                      data:
+                        entity_id: $hass_climate
+            - if:
+                condition:
+                  lambda: 'return (root.containsKey("ATCEnable") && root["ATCEnable"] == 0);'
+                then:
+                  - homeassistant.service:
+                      service: climate.turn_off
+                      data:
+                        entity_id: $hass_climate
+            - if:
+                condition:
+                  lambda: 'return (root.containsKey("ATCExpect0"));'
+                then:
+                  - homeassistant.service:
+                      service: climate.set_temperature
+                      data:
+                        entity_id: $hass_climate
+                        temperature: !lambda 'return root["ATCExpect0"].as<int>();'
+                        hvac_mode: heat
+ 
+output:
+  # Buzzer for playing tones  
+  - platform: ledc
+    id: ${device_name}_buzzer_out
+    pin:
+      number: 21
+
+rtttl:
+  id: ${device_name}_buzzer
+  output: ${device_name}_buzzer_out
+  on_finished_playback:
+    -  output.turn_off: ${device_name}_buzzer_out
+
+api:
+  id: api_id
+  services:
+    - service: set_ledc_frequency
+      variables:
+        my_frequency: float
+      then:
+        - output.turn_on: ${device_name}_buzzer_out
+        - output.ledc.set_frequency:
+            id: ${device_name}_buzzer_out
+            frequency: !lambda "return my_frequency;"
+
+    - service: set_output_level
+      variables:
+        my_level: float
+      then:
+        - output.turn_on: ${device_name}_buzzer_out
+        - output.set_level:
+            id: ${device_name}_buzzer_out
+            level: !lambda "return my_level;"
+
+    - service: send_json
+      variables:
+        my_type: int
+        my_json: string
+      then:
+        - lambda: 'id(ns_panel).send_json_command(my_type,my_json);'
+        # JSON commands list: 
+        # https://blakadder.github.io/nspanel/ 
+        # https://blakadder.com/nspanel-hacking/
+        # https://gist.github.com/blakadder/7928279bd95ad47b54f705b7a121a7e1
+        # https://github.com/blakadder/nspanel/blob/main/nextion-objects-readtext.txt
+
+    - service: play_rtttl
+      variables:
+        song_str: string
+      then:
+        - output.turn_on: ${device_name}_buzzer_out
+        - rtttl.play:
+            rtttl: !lambda "return song_str;"
+        - output.turn_off: ${device_name}_buzzer_out
+
+    - service: weather_data
+      variables:
+        icon: int
+        temperature: int
+        min: int
+        max: int
+      then:
+        - lambda: id(ns_panel).send_weather_data((nspanel::WeatherIcon)icon, temperature, min, max);
+
+number: 
+  - platform: template
+    entity_category: config      
+    name: LEDC Frequency
+    icon: mdi:sine-wave
+    id: ledc_frequency
+    optimistic: true
+    min_value: 1220
+    max_value: 19531
+    step: 100
+    set_action:
+      then:
+        - output.turn_on: ${device_name}_buzzer_out
+        - output.ledc.set_frequency:
+            id: ${device_name}_buzzer_out
+            frequency: !lambda "return x;"  # Hz
+
+  - platform: template
+    entity_category: config      
+    name: LEDC Level
+    icon: mdi:cosine-wave
+    id: ledc_level
+    optimistic: true
+    min_value: 0
+    max_value: 1
+    step: 0.1
+    set_action: 
+      then:
+        - output.turn_on: ${device_name}_buzzer_out
+        - output.set_level:
+            id: ${device_name}_buzzer_out
+            level: !lambda "return x;" # %      
+
+switch:
+  - platform: gpio
+    name: Left
+    icon: mdi:arrow-left-bold-box
+    id: ${device_name}_relay_1
+    restore_mode: ALWAYS_ON
+    pin:
+      number: 22
+
+  - platform: gpio
+    name: Right
+    icon: mdi:arrow-right-bold-box
+    id: ${device_name}_relay_2
+    restore_mode: ALWAYS_ON
+    pin:
+      number: 19
+
+  - platform: gpio
+    # Panel Screen Power
+    name: Screen
+    id: ${device_name}_screen_power
+    entity_category: config
+    icon: mdi:monitor-speaker-off
+    pin:
+      number: 4
+      inverted: true
+    restore_mode: ALWAYS_ON
+    on_turn_on:
+      # Initiliase Screen - These timings could be more aggressive
+      then:
+        - delay: 6s
+        - script.execute: nspanel_init
+        - delay: 3s
+        - script.execute: nspanel_weather
+        - script.execute: nspanel_humidity
+          # Must send Wifi State for widgets to update (particulalry after power-on of screen only
+          # code taken from within NSPanel component code
+        - lambda: |-
+            uint8_t rssi = 0;
+            rssi = (wifi::global_wifi_component->wifi_rssi() * -1) / 20.0f;
+            std::string json_str = json::build_json([rssi](JsonObject root) {
+              root["wifiState"] = "connected";
+              root["rssiLevel"] = rssi;
+            });
+            id(ns_panel).send_json_command(0x85, json_str);
+
+  - platform: template
+    # Template switch to enable/disable screen dimming
+    name: Screensaver Climate
+    id: ${device_name}_climate_screensave
+    icon: mdi:thermostat
+#    entity_category: config
+    restore_state: false
+    optimistic: true
+    restore_mode: ALWAYS_OFF
+    on_turn_on: 
+      then:
+        - script.execute: nspanel_climate
+    on_turn_off: 
+      then:
+        - script.execute: nspanel_weather
+
+  - platform: template
+    # Template switch to enable/disable screen dimming
+    name: Energy Saving Mode
+    id: ${device_name}_eco_mode
+    icon: mdi:leaf
+    entity_category: config
+    restore_state: true
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+
+  - platform: template
+    name: Left Indicator
+    id: ${device_name}_left_indicator
+    entity_category: config
+    icon: mdi:arrow-left-box    
+    optimistic: true
+    restore_state: true
+    restore_mode: RESTORE_DEFAULT_OFF
+    turn_on_action: 
+      lambda: |-
+        id(ns_panel).send_json_command(0x87, "{\"switches\":[{\"outlet\":0,\"switch\":\"on\"}]}");
+    turn_off_action: 
+      lambda: |-
+        id(ns_panel).send_json_command(0x87, "{\"switches\":[{\"outlet\":0,\"switch\":\"off\"}]}");   
+
+  - platform: template
+    name: Right Indicator
+    id: ${device_name}_right_indicator
+    entity_category: config
+    icon: mdi:arrow-right-box    
+    optimistic: true
+    restore_state: true
+    restore_mode: RESTORE_DEFAULT_OFF
+    turn_on_action: 
+      lambda: |-
+        id(ns_panel).send_json_command(0x87, "{\"switches\":[{\"outlet\":1,\"switch\":\"on\"}]}");
+    turn_off_action: 
+      lambda: |-
+        id(ns_panel).send_json_command(0x87, "{\"switches\":[{\"outlet\":1,\"switch\":\"off\"}]}");                        
+
+button: 
+  - platform: template
+    name: Factory Test Mode 
+    id: ${device_name}_factory_test_mode
+    icon: mdi:fit-to-screen-outline
+    entity_category: diagnostic
+#    disabled_by_default: true 
+    on_press: 
+      then: # Initiliase Factory Test Mode
+        - lambda: |-
+            id(ns_panel).send_json_command(0x80, "{\"queryInfo\":\"factory\"}");
+  
+binary_sensor:
+# NS Panel Hard Switches
+  - platform: gpio
+    id: ${device_name}_button_1
+    name: Left Button
+    icon: mdi:arrow-left-bold-box-outline
+    pin:
+      number: 14
+      inverted: true
+    on_press:
+      then:
+        if:
+          condition:
+            api.connected: 
+          then:
+            - homeassistant.service:
+                service: light.toggle
+                data:
+                  entity_id: $hass_light_rgb_01
+          else:
+            - switch.toggle: ${device_name}_relay_1
+    on_multi_click:
+      - timing:
+          - ON for at least 3s
+        then:
+          - switch.toggle: ${device_name}_relay_1
+      - timing:
+          - ON for at least 5s
+        then:
+          - button.press: ${device_name}_restart
+
+  - platform: gpio
+    id: ${device_name}_button_2
+    name: Right Button
+    icon: mdi:arrow-right-bold-box-outline
+    pin:
+      number: 27
+      inverted: true
+    on_press:
+      then:
+        if:
+          condition:
+            api.connected: 
+          then:
+            - homeassistant.service:
+                service: light.toggle
+                data:
+                  entity_id: $hass_light_white
+          else:
+            - switch.toggle: ${device_name}_relay_2
+    on_multi_click:
+      - timing:
+          - ON for at least 3s
+        then:
+          - switch.toggle: ${device_name}_relay_2
+      - timing:
+          - ON for at least 5s
+        then:
+          - button.press: ${device_name}_restart
+
+# HA Tracking sensors for device states
+# Update nspanel on state change
+  - platform: homeassistant
+    id: hass_light_white
+    name: $hass_light_white
+    entity_id: $hass_light_white
+    on_press:
+      then:
+        - switch.turn_on: ${device_name}_right_indicator                        
+        - logger.log: "Turning ON Right indicator"
+        - lambda: 'id(ns_panel).send_json_command(0x86,"{\"id\":\"hass_light_white\",\"params\":{\"switch\":\"on\"}}");'
+    on_release:
+      then:
+        - switch.turn_off: ${device_name}_right_indicator                                                
+        - logger.log: "Turning OFF Right indicator"        
+        - lambda: 'id(ns_panel).send_json_command(0x86,"{\"id\":\"hass_light_white\",\"params\":{\"switch\":\"off\"}}");'
+
+  - platform: homeassistant
+    id: hass_light_rgb_01
+    name: $hass_light_rgb_01
+    entity_id: $hass_light_rgb_01
+    on_press:
+      then:
+        - switch.turn_on: ${device_name}_left_indicator                  
+        - logger.log: "Turning ON Left indicator"        
+        - lambda: 'id(ns_panel).send_json_command(0x86,"{\"id\":\"light_rgb_01\",\"params\":{\"switch\":\"on\"}}");'
+    on_release:
+      then:
+        - switch.turn_off: ${device_name}_left_indicator                
+        - logger.log: "Turning OFF Left indicator"        
+        - lambda: 'id(ns_panel).send_json_command(0x86,"{\"id\":\"light_rgb_01\",\"params\":{\"switch\":\"off\"}}");'
+
+  - platform: homeassistant        
+    id: hass_light_rgb_02
+    name: $hass_light_rgb_02
+    entity_id: $hass_light_rgb_02
+    on_press:
+      then:
+        - lambda: 'id(ns_panel).send_json_command(0x86,"{\"id\":\"light_rgb_02\",\"params\":{\"switch\":\"on\"}}");'
+    on_release:
+      then:
+        - lambda: 'id(ns_panel).send_json_command(0x86,"{\"id\":\"light_rgb_02\",\"params\":{\"switch\":\"off\"}}");'        
+
+  - platform: homeassistant
+    id: hass_plug_01_switch
+    name: $hass_plug_01
+    entity_id: $hass_plug_01
+    on_press:
+      then:
+        - lambda: 'id(ns_panel).send_json_command(0x86,"{\"id\":\"hass_plug_01\",\"params\":{\"switch\":\"on\"}}");'
+    on_release:
+      then:
+        - lambda: 'id(ns_panel).send_json_command(0x86,"{\"id\":\"hass_plug_01\",\"params\":{\"switch\":\"off\"}}");'
+
+  - platform: homeassistant
+    id: plug_08_switch
+    name: $hass_plug_grouped_02
+    entity_id: $hass_plug_grouped_02
+    on_press:
+      then:
+        - lambda: 'id(ns_panel).send_json_command(0x86,"{\"id\":\"group_01\",\"params\":{\"switches\":[{\"switch\":\"on\",\"outlet\":0}]}}");'
+    on_release:
+      then:
+        - lambda: 'id(ns_panel).send_json_command(0x86,"{\"id\":\"group_01\",\"params\":{\"switches\":[{\"switch\":\"off\",\"outlet\":0}]}}");'
+
+  - platform: homeassistant
+    id: plug_11_switch
+    entity_id: $hass_plug_grouped_02
+    name: $hass_plug_grouped_02
+    on_press:
+      then:
+        - lambda: 'id(ns_panel).send_json_command(0x86,"{\"id\":\"group_01\",\"params\":{\"switches\":[{\"switch\":\"on\",\"outlet\":1,\"name\":\"11\"}]}}");'
+    on_release:
+      then:
+        - lambda: 'id(ns_panel).send_json_command(0x86,"{\"id\":\"group_01\",\"params\":{\"switches\":[{\"switch\":\"off\",\"outlet\":1}]}}");'
+
+sensor:
+# nspanel related temperature sensors
+# Internal temperature sensor, adc value
+  - platform: adc
+    id: ${device_name}_ntc_source
+    name: NTC source
+    internal: true
+    pin: 38
+    update_interval: 10s
+    attenuation: 11db
+
+# Internal temperature sensor, adc reading converted to resistance (calculation)
+  - platform: resistance
+    id: ${device_name}_resistance_sensor
+    name: Resistance sensor
+    internal: true
+    sensor: ${device_name}_ntc_source
+    configuration: DOWNSTREAM
+    resistor: 11.2kOhm
+
+# Internal temperature sensor, resistance to temperature (calculation)    
+  - platform: ntc
+    id: ${device_name}_temperature
+    sensor: ${device_name}_resistance_sensor
+    calibration:
+      b_constant: 3950
+      reference_temperature: 21°C
+      reference_resistance: 10kOhm
+    name: Temperature
+    filters:
+    - median:
+        window_size: 60
+        send_every: 60
+        send_first_at: 6        
+    on_value:
+      then:
+        - script.execute: nspanel_humidity        
+
+# Home Assistant Humidity sensor to update panel screensaver
+  - platform: homeassistant
+    id: sensor_humidity
+    entity_id: ${hass_sensor_humidity}
+    name: ${hass_sensor_humidity}
+    on_value:
+      then:
+        - script.execute: nspanel_humidity
+
+# Home Assistant Light State Sensors to update panel
+  - platform: homeassistant
+    # Light $hass_light brightness (0-255)
+    id: hass_light_white_bright
+    name: $hass_light_white brightness
+    entity_id: $hass_light_white
+    attribute: brightness
+    on_value:
+      then:
+        - script.execute: ha_hass_light_white_update
+
+  - platform: homeassistant
+    # Light $hass_light_rgb brightness (0-255)
+    id: hass_light_rgb_01_bright
+    name: $hass_light_rgb_01 brightness
+    entity_id: $hass_light_rgb_01
+    attribute: brightness
+    on_value:
+      then:
+        - script.execute: ha_hass_light_rgb_01_update
+
+  - platform: homeassistant
+    # Light $hass_light_rgb brightness (0-255)
+    id: hass_light_rgb_02_bright
+    name: $hass_light_rgb_02 brightness
+    entity_id: $hass_light_rgb_02
+    attribute: brightness
+    on_value:
+      then:
+        - script.execute: ha_hass_light_rgb_02_update        
+
+  - platform: homeassistant
+    # Light $hass_light_rgb brightness (0-255)
+    id: hass_cover_01_pos
+    name: $hass_cover_01 position
+    entity_id: $hass_cover_01
+    attribute: current_position
+    on_value:
+      then:
+        - script.execute: ha_hass_cover_01_update_pos
+
+  - platform: homeassistant
+    # Thermostat set temp
+    id: climate
+    name: $hass_climate
+    entity_id: $hass_climate
+    attribute: temperature
+    internal: true
+    on_value:
+      then:
+        - script.execute: ha_thermostat_update_temp
+
+  - platform: homeassistant
+    id: hass_weather_temperature
+    name: Weather temperature
+    entity_id: $hass_weather
+    attribute: temperature
+    internal: true
+    on_value:
+      then:
+        - script.execute: nspanel_weather
+
+  # states.weather.home.attributes[0]["temperature"]
+  - platform: homeassistant
+    id: hass_weather_forecast_high
+    name: Weather forecast high
+    entity_id: $hass_sensor.weather
+    attribute: forecast_high
+    internal: true
+    on_value:
+      then:
+        - script.execute: nspanel_weather
+
+  # states.weather.home.attributes[0]["templow"]
+  - platform: homeassistant
+    id: hass_weather_forecast_low
+    name: Weather forecast low
+    entity_id: $hass_sensor.weather
+    attribute: forecast_low
+    internal: true
+    on_value:
+      then:
+        - script.execute: nspanel_weather        
+        
+text_sensor:
+# Text Sensors to track attirbutes from HA (HA -> Panel)
+  - platform: homeassistant
+    name: ${hass_light_rgb_01} rgb_color
+    id: hass_light_rgb_01_rgb
+    entity_id: $hass_light_rgb_01
+    attribute: rgb_color
+    internal: true
+    on_value:
+      then:
+        - script.execute: ha_hass_light_rgb_01_update
+
+  - platform: homeassistant
+    name: ${hass_light_rgb_02} rgb_color
+    id: hass_light_rgb_02_rgb
+    entity_id: $hass_light_rgb_02
+    attribute: rgb_color
+    internal: true
+    on_value:
+      then:
+        - script.execute: ha_hass_light_rgb_02_update        
+
+  - platform: homeassistant
+    id: hass_cover_01_state
+    name: ${hass_cover_01} state
+    entity_id: $hass_cover_01
+    internal: true
+    on_value:
+      then:
+        - script.execute: ha_hass_cover_01_update_state
+
+  - platform: homeassistant
+    id: climate_state
+    name: ${hass_climate} state
+    entity_id: $hass_climate
+    internal: true
+    on_value:
+      then:
+        - script.execute: ha_thermostat_update_state
+
+# Home Assistant weather entity to map icons on screensaver
+  - platform: homeassistant
+    entity_id: $hass_weather
+    name: Weather icon
+    id: hass_weather_icon
+    internal: true
+    filters:   
+      - map:
+        - clear-night -> 1
+        - cloudy -> 7
+        - exceptional -> 1
+        - fog -> 11
+        - hail -> 24
+        - lightning -> 15
+        - lightning-rainy -> 15
+        - partlycloudy -> 2
+        - pouring -> 12
+        - rainy -> 12
+        - snowy -> 22
+        - snowy-rainy -> 29
+        - sunny -> 1
+        - windy -> 32
+        - windy-variant -> 11
+    on_value:
+      then:
+        - script.execute: nspanel_weather
+
+script:
+  - id: nspanel_humidity
+    then:
+      - lambda: |-
+          if (id(sensor_humidity).has_state()) {
+            id(ns_panel).send_json_command(0x83, "{\"temperature\":"+to_string((int) id(${device_name}_temperature).state)+",\"humidity\":"+to_string((int) id(sensor_humidity).state)+"}");
+          }
+          else {
+            ESP_LOGE("nspanel_weather", "Humidity error");
+            id(ns_panel).send_json_command(0x83, "{\"temperature\":69,\"humidity\":420}");
+          }
+
+  - id: ha_hass_light_white_update
+    then:
+      - lambda: |-
+          if (id(hass_light_white).state) {
+            int i_brightness = int(id(hass_light_white_bright).state / 255 * 100); 
+            id(ns_panel).send_json_command(0x86,"{\"id\":\"hass_light_white\",\"params\":{\"switch\":\"on\",\"ltype\":\"white\",\"white\":{\"br\":" + to_string(i_brightness) + "}}}");
+          } else {
+            id(ns_panel).send_json_command(0x86,"{\"id\":\"hass_light_white\",\"params\":{\"switch\":\"off\"}}");
+          }
+
+  - id: ha_hass_light_rgb_01_update
+    # Decode RGB Attribute ((r,g,b) and send to panel
+    then:
+      - lambda: |-
+          if (id(hass_light_rgb_01).state) {
+            int i_brightness = int(id(hass_light_rgb_01_bright).state / 255 * 100); 
+            std::string s = id(hass_light_rgb_01_rgb).state;
+            std::string r = "255";
+            std::string g = "0";
+            std::string b = "0";
+            int p1 = s.find(",");
+            if (p1 > 0) {
+                int p2 = s.find(",",p1+1);
+                r = s.substr(1, p1-1).erase(0,s.find_first_not_of(" ")); 
+                g = s.substr(p1+2,p2-p1-2).erase(0,s.find_first_not_of(" ")); 
+                b = s.substr(p2+2,s.length()-2).erase(0,s.find_first_not_of(" ")); 
+            }
+            id(ns_panel).send_json_command(0x86,"{\"id\":\"light_rgb_01\",\"params\":{\"switch\":\"on\",\"light_type\":1,\"mode\":1,\"bright\":" + to_string(i_brightness) + ",\"colorR\":" + to_string(r) + ",\"colorG\":" + to_string(g) + ",\"colorB\":" + to_string(b) + "}}");
+          } else {
+            id(ns_panel).send_json_command(0x86,"{\"id\":\"light_rgb_01\",\"params\":{\"switch\":\"off\"}}");
+          }
+
+  - id: ha_hass_light_rgb_02_update
+    # Decode RGB Attribute ((r,g,b) and send to panel
+    then:
+      - lambda: |-
+          if (id(hass_light_rgb_02).state) {
+            int i_brightness = int(id(hass_light_rgb_02_bright).state / 255 * 100); 
+            std::string s = id(hass_light_rgb_02_rgb).state;
+            std::string r = "255";
+            std::string g = "0";
+            std::string b = "0";
+            int p1 = s.find(",");
+            if (p1 > 0) {
+                int p2 = s.find(",",p1+1);
+                r = s.substr(1, p1-1).erase(0,s.find_first_not_of(" ")); 
+                g = s.substr(p1+2,p2-p1-2).erase(0,s.find_first_not_of(" ")); 
+                b = s.substr(p2+2,s.length()-2).erase(0,s.find_first_not_of(" ")); 
+            }
+            id(ns_panel).send_json_command(0x86,"{\"id\":\"light_rgb_02\",\"params\":{\"switch\":\"on\",\"light_type\":1,\"mode\":1,\"bright\":" + to_string(i_brightness) + ",\"colorR\":" + to_string(r) + ",\"colorG\":" + to_string(g) + ",\"colorB\":" + to_string(b) + "}}");
+          } else {
+            id(ns_panel).send_json_command(0x86,"{\"id\":\"light_rgb_02\",\"params\":{\"switch\":\"off\"}}");
+          }          
+
+  - id: ha_hass_plug_01_update
+    then:
+      - lambda: |-
+          if(id(hass_plug_01_switch).state) {
+            id(ns_panel).send_json_command(0x86,"{\"id\":\"hass_plug_01\",\"params\":{\"switch\":\"on\"}}");
+          } else {
+            id(ns_panel).send_json_command(0x86,"{\"id\":\"hass_plug_01\",\"params\":{\"switch\":\"off\"}}");
+          }
+
+  - id: ha_plug_08_update
+    then:
+      - lambda: |-
+          if(id(plug_08_switch).state) {
+            id(ns_panel).send_json_command(0x86,"{\"id\":\"group_01\",\"params\":{\"switches\":[{\"switch\":\"on\",\"outlet\":0}]}}");
+          } else {
+            id(ns_panel).send_json_command(0x86,"{\"id\":\"group_01\",\"params\":{\"switches\":[{\"switch\":\"off\",\"outlet\":0}]}}");
+          }
+
+  - id: ha_plug_11_update
+    then:
+      - lambda: |-
+          if(id(plug_11_switch).state) {
+            id(ns_panel).send_json_command(0x86,"{\"id\":\"group_01\",\"params\":{\"switches\":[{\"switch\":\"on\",\"outlet\":1}]}}");
+          } else {
+            id(ns_panel).send_json_command(0x86,"{\"id\":\"group_01\",\"params\":{\"switches\":[{\"switch\":\"off\",\"outlet\":1}]}}");
+          }
+
+  - id: ha_hass_cover_01_update_state
+    then:
+      - lambda: |-
+         if(id(hass_cover_01_state).state == "open") {
+            id(ns_panel).send_json_command(0x86,"{\"id\":\"hass_cover_01\",\"params\":{\"switch\":\"on\"}}");
+          } else {
+            id(ns_panel).send_json_command(0x86,"{\"id\":\"hass_cover_01\",\"params\":{\"switch\":\"off\"}}");
+          }
+
+  - id: ha_hass_cover_01_update_pos
+    then:
+      - lambda: |-
+          id(ns_panel).send_json_command(0x86,"{\"id\":\"hass_cover_01\",\"params\":{\"setclose\":" + to_string(100 - id(hass_cover_01_pos).state) + "}}");
+
+  - id: ha_thermostat_update_state
+    then:
+      # Update Thermostat On/Off
+      - lambda: |-
+          if (id(climate_state).state == "heat") { 
+           id(ns_panel).send_json_command(0x84,"{\"ATCEnable\":1}");
+          } else {
+           id(ns_panel).send_json_command(0x84,"{\"ATCEnable\":0}");
+          }
+
+  - id: ha_thermostat_update_temp
+    then:
+      # Update Thermostat Temperature
+      - lambda: |-
+          if ( (int) id(climate).state > 15 && (int) id(climate).state < 32 && id(climate_state).state == "heat") {
+            id(ns_panel).send_json_command(0x84,"{\"ATCExpect0\":" + to_string((int) id(climate).state) + "}");
+          }
+
+  - id: nspanel_init
+    # Script to initialise panel on full power on (or when screen is powered on from ESP)
+    then:
+      # Setup Widgets - must send all 8
+      # Widget 1
+      - lambda: |-
+          id(ns_panel).send_json_command(0x86,"{\"HMI_resources\":[{\"index\":1,\"ctype\":\"device\",\"id\":\"hass_light_white\",\"uiid\":52}]}"); id(ns_panel).send_json_command(0x86,"{\"relation\":[{\"ctype\":\"device\",\"id\":\"hass_light_white\",\"name\":\"Corridor\",\"online\":1,\"params\":{\"switch\":\"off\",\"ltype\":\"white\",\"white\":{\"br\":0,\"ct\":0}}]}");
+      # Widget 2
+      - lambda: |-
+          id(ns_panel).send_json_command(0x86,"{\"HMI_resources\":[{\"index\":2,\"ctype\":\"device\",\"id\":\"light_rgb_01\",\"uiid\":33}]}");
+          id(ns_panel).send_json_command(0x86,"{\"relation\":[{\"ctype\":\"device\",\"id\":\"light_rgb_01\",\"name\":\"Balcony\",\"online\":1,\"params\":{\"switch\":\"on\"}]}");
+      # Widget 3      
+      - lambda: |-
+          id(ns_panel).send_json_command(0x86,"{\"HMI_resources\":[{\"index\":3,\"ctype\":\"device\",\"id\":\"light_rgb_02\",\"uiid\":69}]}");
+          id(ns_panel).send_json_command(0x86,"{\"relation\":[{\"ctype\":\"device\",\"id\":\"light_rgb_02\",\"name\":\"Twinkly\",\"online\":1,\"params\":{\"switch\":\"on\"}]}");          
+      # Widget 4
+      - lambda: |-
+          id(ns_panel).send_json_command(0x86,"{\"HMI_resources\":[{\"index\":4,\"ctype\":\"device\",\"id\":\"hass_plug_01\",\"uiid\":1}]}");
+          id(ns_panel).send_json_command(0x86,"{\"relation\":[{\"ctype\":\"device\",\"id\":\"hass_plug_01\",\"name\":\"Gate\",\"online\":1,\"params\":{\"switch\":\"on\"}]}");
+      # Widget 5
+      - lambda: |-
+          id(ns_panel).send_json_command(0x86,"{\"HMI_resources\":[{\"index\":5,\"ctype\":\"device\",\"id\":\"group_01\",\"uiid\":2}]}");
+          id(ns_panel).send_json_command(0x86,"{\"relation\":[{\"ctype\":\"device\",\"id\":\"group_01\",\"name\":\"Switches\",\"online\":1,\"params\":{\"switches\":[{\"switch\":\"on\",\"outlet\":0},{\"switch\":\"on\",\"outlet\":1}]}");
+      # Widget 6
+      - lambda: |-
+          id(ns_panel).send_json_command(0x86,"{\"HMI_resources\":[{\"index\":6,\"ctype\":\"device\",\"id\":\"hass_cover_01\",\"uiid\":11}]}");
+          id(ns_panel).send_json_command(0x86,"{\"relation\":[{\"ctype\":\"device\",\"id\":\"hass_cover_01\",\"name\":\"Shade\",\"online\":1,\"params\":{\"switch\":\"on\"}]}");
+      # Widget 7
+      - lambda: |-
+          id(ns_panel).send_json_command(0x86,"{\"HMI_resources\":[{\"index\":7,\"ctype\":\"scene\",\"id\":\"song\"}");
+          id(ns_panel).send_json_command(0x86,"{\"relation\":[{\"ctype\":\"scene\",\"id\":\"song\",\"name\":\"Song\"}]}");
+      # Widget 8
+      - lambda: |-
+          id(ns_panel).send_json_command(0x86,"{\"HMI_resources\":[{\"index\":8,\"ctype\":\"scene\",\"id\":\"scene_sleep\"}]}");
+          id(ns_panel).send_json_command(0x86,"{\"relation\":[{\"ctype\":\"scene\",\"id\":\"scene_sleep\",\"name\":\"Sleep\"}]}");
+#      # If you wish to delete widgets
+#      # Widget 7      
+#      - lambda: 'id(ns_panel).send_json_command(0x86,"{\"index\":7,\"type\":\"delete\"}");'
+#      # Widget 8
+#      - lambda: 'id(ns_panel).send_json_command(0x86,"{\"index\":8,\"type\":\"delete\"}");'
+
+      # Update existing Entities / Widgets
+      - logger.log: "[nspanel_boot] updating widgets state"      
+      - script.execute: ha_hass_light_white_update # widget 1 - corridor
+      - script.execute: ha_hass_light_rgb_01_update # widget 2 - balcony 
+      - script.execute: ha_hass_light_rgb_02_update # widget 3 - twinkly 
+      - script.execute: ha_hass_plug_01_update # widget 4 - hass_plug_01 - guest_mode
+      - script.execute: ha_plug_08_update # widget 5 - switch group_01
+      - script.execute: ha_plug_11_update  # widget 6 shade
+      - script.execute: ha_hass_cover_01_update_state # cover - shade 
+      - script.execute: ha_hass_cover_01_update_pos # cover - shade
+      # Setup Thermostat
+      - lambda: 'id(ns_panel).send_json_command(0x84,"{\"HMI_ATCDevice\":{\"ctype\":\"device\",\"id\":\"climate\",\"outlet\":0,\"etype\":\"hot\"}}");'
+      - lambda: 'id(ns_panel).send_json_command(0x84,"{\"ATCMode\":0}");'
+      # Update Thermostat
+      - script.execute: ha_thermostat_update_state
+      - script.execute: ha_thermostat_update_temp
+      # Update Humidity
+      - script.execute: nspanel_humidity
+
+  - id: nspanel_weather
+    # Grab weather status from Home Assistant
+    then:
+      - logger.log: "nspanel_weather started"
+      - lambda: |-
+          if (id(hass_weather_icon).has_state()) {
+            id(ns_panel).send_json_command(0x81,"{\"HMI_weather\":" + id(hass_weather_icon).state + ",\"HMI_outdoorTemp\":{\"current\":" + to_string((int) id(hass_weather_temperature).state) + ",\"range\":\"" + to_string((int) id(hass_weather_forecast_low).state) + "," + to_string((int) id(hass_weather_forecast_high).state) + "\"}}");
+          }
+          else {
+            ESP_LOGE("nspanel_weather", "Weather error");
+            id(ns_panel).send_json_command(0x81,"{\"HMI_weather\":32,\"HMI_outdoorTemp\":{\"current\":69,\"range\":69,420\"}}");
+          }
+
+  - id: nspanel_climate
+    # show climate data on front screen instead of weather
+    then:
+      - logger.log: "nspanel_climate started"
+      - lambda: |-
+          int icon = 31;
+          auto auto_climate_state = id(climate_state).state;      
+          if (id(climate).has_state()) {
+            if ( auto_climate_state == "heat"){
+              icon = 30;
+            } else {
+              icon = 31;
+            }
+            id(ns_panel).send_json_command(0x81,"{\"HMI_weather\":" + to_string((int)icon) + ",\"HMI_outdoorTemp\":{\"current\":" + to_string((int) id(climate).state) + ",\"range\":\"15,32\"}}");
+          }
+          else {
+            ESP_LOGE("nspanel_weather", "Climate error");
+          }
