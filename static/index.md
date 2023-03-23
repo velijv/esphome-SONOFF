@@ -1,6 +1,8 @@
-# About
+# ESPHome projects by [Veli](https://veli.ee)
 
-Add some information about your project here.
+<img alt="Made for ESPHome" src="./static/made-for-esphome.svg" width="256">
+
+ESPHome Projects by [Veli](https://veli.ee)/[git](https://github.com/velijv)
 
 # Installation
 
