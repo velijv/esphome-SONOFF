@@ -1,6 +1,6 @@
 # [SONOFF NSPanel](https://sonoff.tech/product/central-control-panel/nspanel/) [ESPHome configuration by Veli](https://github.com/velijv/esphome-project-template)
 
-> ## Looks like stock version, works even better! 
+> Looks like stock, works locally and has more controls! 
 
 | <img alt="Sonoff" src="https://raw.githubusercontent.com/velijv/esphome-project-template/main/static/logos/sonoff.svg" height="100"> | <img alt="NSpanel" src="https://raw.githubusercontent.com/velijv/esphome-project-template/main/static/icons/nspanel86.svg" height="100"> | <img alt="Made for ESPHome" src="https://raw.githubusercontent.com/velijv/esphome-project-template/main/static/logos/made-for-esphome.svg" height="100"> | <img alt="NSpanel White" src="https://raw.githubusercontent.com/velijv/esphome-project-template/main/static/icons/nspanel86w.svg" height="100"> 
 |------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------|
@@ -46,7 +46,7 @@
 
 </details>
 
-<details>
+<details open>
 <summary>🖥️ Home Assistant device page</summary>
 
 ![Home Assistant Device](https://raw.githubusercontent.com/velijv/esphome-project-template/main/static/screens/homeassistant-device.jpeg)
