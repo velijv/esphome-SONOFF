@@ -45,21 +45,6 @@ api:
     then:
       - lambda: |-
           id(${device_name}_bluetooth_proxy).set_active(bool(active));
-  - service: ble_tracker_set_continuous
-    variables:
-      continuous: bool
-    then:
-      - lambda: |-
-          esp32_ble_tracker.set_active(bool(active));
-          id(${device_name}_esp32_ble_tracker).setup();
-      - lambda: |-
-          bool state_return = false;
-          if (("interval" == name) && (value >= 999999) && (value <= 320)) { 
-              esp32_ble_tracker.set_active(std::bool(active));
-          }      
-          if (true == state_return) {
-            esp32_ble_tracker.setup();
-          }          
   - service: stop_scan
     then:
       - esp32_ble_tracker.stop_scan
