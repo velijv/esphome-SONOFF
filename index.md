@@ -1,23 +1,41 @@
 <h1>
 	<a href="https://sonoff.tech/product/smart-wall-switches/m5/">SONOFF SwitchMan-M5 (1C, 2C, 3C)</a>
-	<a href="https://github.com/velijv/esphome-configs">ESPHome configuration</a> by <a href="https://veli.ee/">Veli</a>
+	<a href="https://github.com/velijv/esphome-configs">ESPHome configuration</a></a>
 </h1>
 
 <h1>
 	<a href="https://sonoff.tech/product/central-control-panel/nspanel/">SONOFF NSPanel</a>
 	<a href="https://esphome.io/">ESPHome</a>
-	<a href="https://github.com/velijv/esphome-configs">configuration</a> by <a href="https://veli.ee/">Veli</a>
+	<a href="https://github.com/velijv/esphome-configs">configuration</a></a>
 </h1>
 
 <blockquote>Looks like stock, works locally and has more controls!</blockquote>
 
-<table><tr><td><img alt="NSpanel White" src="https://raw.githubusercontent.com/velijv/esphome-configs/main/static/icons/nspanel86w.svg" height="100">     
-		<td><img alt="Sonoff" src="https://raw.githubusercontent.com/velijv/esphome-configs/main/static/logos/sonoff.svg" height="100"></td>
-		<td><img alt="NSpanel" src="https://raw.githubusercontent.com/velijv/esphome-configs/main/static/icons/nspanel86.svg" height="100"></td>
-		<td><img alt="M5-1C-86" src="https://raw.githubusercontent.com/velijv/esphome-configs/main/static/icons/m5-1c-86.svg" height="100"></td>
-		<td><img alt="M5-2C-86" src="https://raw.githubusercontent.com/velijv/esphome-configs/main/static/icons/m5-2c-86.svg" height="100"></td>        
-		<td><img alt="M5-3C-86" src="https://raw.githubusercontent.com/velijv/esphome-configs/main/static/icons/m5-3c-86.svg" height="100"></td>
-		<td><img alt="Made for ESPHome" src="https://raw.githubusercontent.com/velijv/esphome-configs/main/static/logos/made-for-esphome.svg" height="100"></td></tr></table>
+<table>
+	<tr>
+		<td>
+			<img alt="NSpanel White" src="https://raw.githubusercontent.com/velijv/esphome-configs/main/static/icons/nspanel86w.svg" height="100">
+		</td>
+		<td>
+			<img alt="Sonoff" src="https://raw.githubusercontent.com/velijv/esphome-configs/main/static/logos/sonoff.svg" height="100">
+		</td>
+		<td>
+			<img alt="NSpanel" src="https://raw.githubusercontent.com/velijv/esphome-configs/main/static/icons/nspanel86.svg" height="100">
+		</td>
+		<td>
+			<img alt="M5-1C-86" src="https://raw.githubusercontent.com/velijv/esphome-configs/main/static/icons/m5-1c-86.svg" height="100">
+		</td>
+		<td>
+			<img alt="M5-2C-86" src="https://raw.githubusercontent.com/velijv/esphome-configs/main/static/icons/m5-2c-86.svg" height="100">
+		</td>
+		<td>
+			<img alt="M5-3C-86" src="https://raw.githubusercontent.com/velijv/esphome-configs/main/static/icons/m5-3c-86.svg" height="100">
+		</td>
+		<td>
+			<img alt="Made for ESPHome" src="https://raw.githubusercontent.com/velijv/esphome-configs/main/static/logos/made-for-esphome.svg" height="100">
+		</td>
+	</tr>
+</table>
 
 
 <h2> 🔥 Features </h2>
