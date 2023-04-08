@@ -1,0 +1,286 @@
+# https://templates.blakadder.com/sonoff_SwitchMan_M5-3C.html
+# These substitutions allow the end user to override certain values
+substitutions:
+  friendly_name: 'M5-3C'
+  device_name: 'm5_3c'
+  node_name: 'm5-3c'
+  device_description: '3 Gang Switch (ESP32D0-MSW-T5)'
+  project_base: 'SONOFF'
+  project_name: 'Switchman M5'
+  project_version: '3C-80/86'  
+##########################################################
+# Your home specific:
+##########################################################
+  hass_device_1: light.left
+  hass_device_2: light.middle
+  hass_device_3: light.right
+
+esphome:
+  name: $device_name
+  comment: $device_description
+  friendly_name: $friendly_name
+  # Automatically add the mac address to the name
+  # so you can use a single firmware for all devices
+  name_add_mac_suffix: true
+
+  # This will allow for (future) project identification,
+  # configuration and updates.
+  project:
+    name: ${project_base}.${project_name}
+    version: ${project_version}
+
+esp32:
+  board: esp32dev
+
+# To be able to get logs from the device via serial and api.
+logger:
+
+# API is a requirement of the dashboard import.
+api:
+##########################################################
+# for managing bluetooth_proxy & esp32_ble_tracker
+##########################################################
+  services:
+  - service: bluetooth_proxy_set_param
+    variables: 
+      active: bool
+    then:
+      - lambda: |-
+          esp32_bluetooth_proxy.set_active(bool(active));
+
+  - service: ble_tracker_set_continuous
+    variables:
+      continuous: bool
+    then:
+      - lambda: |-
+          esp32_ble_tracker.set_active(bool(active));
+          id(${device_name}_esp32_ble_tracker).setup();
+
+      - lambda: |-
+          bool state_return = false;
+          if (("interval" == name) && (value >= 999999) && (value <= 320)) { 
+              id(${device_name}_esp32_ble_tracker).set_active(std::bool(active));
+          }      
+          if (true == state_return) {
+            id(${device_name}_esp32_ble_tracker).setup();
+          }          
+  - service: stop_scan
+    then:
+      - esp32_ble_tracker.stop_scan
+  - service: start_scan
+    then:
+      - id(${device_name}_esp32_ble_tracker).start_scan
+
+# OTA is required for Over-the-Air updating
+ota:
+
+# This should point to the public location of this yaml file.
+dashboard_import:
+  package_import_url: github://velijv/esphome-configs/switchman-m5-3c.yaml@main
+
+wifi:
+  # Set up a wifi access point using the device name above
+  ap:
+    password: "12345678"
+
+# In combination with the `ap` this allows the user
+# to provision wifi credentials to the device.
+captive_portal:
+
+##########################################################
+# Most projects should not remove anything from above here
+# and should just modify the name, project name/version
+# and git url for the dashboard_import
+##########################################################
+
+
+# Sets up Bluetooth LE (Only on ESP32) to allow the user
+# to provision wifi credentials to the device.
+esp32_improv:
+  authorizer: none
+
+# Sets up the improv via serial client for Wi-Fi provisioning.
+# Handy if your device has a usb port for the user to add credentials when they first get it.
+improv_serial:
+
+##########################################################
+# SONOFF SWITCHMAN M5 starts here
+# Enough room to fit ble_tracker and bluetooth_proxy
+##########################################################
+
+esp32_ble_tracker:
+  id: ${device_name}_esp32_ble_tracker
+  scan_parameters:
+    active: true
+    continuous: true
+bluetooth_proxy:
+  id: ${device_name}_bluetooth_proxy
+  active: true
+
+##########################################################
+# Hardware config starts here
+##########################################################
+
+binary_sensor:
+  - platform: gpio
+    name: Left
+    id: ${device_name}_button_left
+    icon: mdi:format-horizontal-align-left
+    pin:
+      number: 4
+      inverted: true
+    on_click:
+      then:
+        if:
+          condition:
+            api.connected:
+          then:
+            - homeassistant.service:
+                service: homeassistant.toggle
+                data:
+                  entity_id: $hass_device_1
+            - light.toggle: ${device_name}_led_left
+          else:
+            - switch.toggle: ${device_name}_switch_left
+
+  - platform: gpio
+    id: ${device_name}_button_center
+    icon: mdi:format-horizontal-align-center
+    name: Center
+    pin:
+      number: 0
+      inverted: true
+    on_click:
+      then:
+        if:
+          condition:
+            api.connected:
+          then:
+            - homeassistant.service:
+                service: homeassistant.toggle
+                data:
+                  entity_id: $hass_device_2
+            - light.toggle: ${device_name}_led_center
+          else:
+            - switch.toggle:  ${device_name}_switch_center
+
+  - platform: gpio
+    id: ${device_name}_button_right
+    icon: mdi:format-horizontal-align-right
+    name: Right
+    pin:
+      number: 15
+      inverted: true
+    on_click:
+      then:
+        if:
+          condition:
+            api.connected:
+          then:
+            - homeassistant.service:
+                service: homeassistant.toggle
+                data:
+                  entity_id: $hass_device_3
+            - light.toggle: ${device_name}_led_right
+          else:
+            - switch.toggle:  ${device_name}_switch_right
+
+switch:
+  - platform: gpio
+    name: Left
+    restore_mode: RESTORE_DEFAULT_ON
+    id: ${device_name}_switch_left
+    pin:
+      number: 23
+
+  - platform: gpio
+    name: Center
+    restore_mode: RESTORE_DEFAULT_ON
+    id: ${device_name}_switch_center
+    pin:
+      number: 19
+    on_turn_on:
+      light.turn_on: ${device_name}_led_center
+    on_turn_off:
+      light.turn_off: ${device_name}_led_center
+
+  - platform: gpio
+    name: Right
+    restore_mode: RESTORE_DEFAULT_ON
+    id: ${device_name}_switch_right
+    pin:
+      number: 22
+    on_turn_on:
+      light.turn_on: ${device_name}_led_right
+    on_turn_off:
+      light.turn_off: ${device_name}_led_right
+
+output:
+  - platform: ledc
+    pin: 18
+    frequency: 1000 Hz
+    id: red_output
+
+  - platform: ledc
+    pin: 5
+    frequency: 1000 Hz
+    id: blue_output
+
+  - platform: gpio
+    pin: 23
+    id: ${device_name}_output_led_left
+
+  - platform: gpio
+    pin: 19
+    id: ${device_name}_output_led_center
+
+  - platform: gpio
+    pin: 22
+    id: ${device_name}_output_led_right
+
+light:
+# RED LEDs
+  - platform: monochromatic
+    output: red_output
+    id: ${device_name}_led_red
+    name: LED (all)
+    default_transition_length: 500ms
+    restore_mode: RESTORE_DEFAULT_OFF
+    icon: mdi:led-on
+    entity_category: config
+    effects:
+      - pulse:
+      - strobe:
+# Blue led for status
+  - platform: status_led
+    name: LED (blue)
+    id: ${device_name}_led_status
+    icon: mdi:led-outline
+    entity_category: config
+    pin:
+      number: 5
+      inverted: true
+# individual red LEDs
+  - platform: binary
+    id: ${device_name}_led_left
+    name: LED (left)
+    output: ${device_name}_output_led_left
+    restore_mode: ALWAYS_OFF
+    icon: mdi:led-outline
+    entity_category: config
+
+  - platform: binary
+    id: ${device_name}_led_center
+    name: LED (center)
+    output: ${device_name}_output_led_center
+    restore_mode: ALWAYS_OFF
+    icon: mdi:led-outline
+    entity_category: config
+
+  - platform: binary
+    id: ${device_name}_led_right
+    name: LED (right)
+    output: ${device_name}_output_led_right
+    restore_mode: ALWAYS_OFF
+    icon: mdi:led-outline
+    entity_category: config    
