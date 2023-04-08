@@ -1,0 +1,9 @@
+{
+  "chipFamily": "ESP32",
+  "parts": [
+    {
+      "path": "m5-1c-esp32/m5-1c-esp32.bin",
+      "offset": 0
+    }
+  ]
+}

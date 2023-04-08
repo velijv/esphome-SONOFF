@@ -8,6 +8,33 @@
       "chipFamily": "ESP32",
       "parts": [
         {
+          "path": "m5-1c-esp32/m5-1c-esp32.bin",
+          "offset": 0
+        }
+      ]
+    },
+    {
+      "chipFamily": "ESP32",
+      "parts": [
+        {
+          "path": "m5-2c-esp32/m5-2c-esp32.bin",
+          "offset": 0
+        }
+      ]
+    },
+    {
+      "chipFamily": "ESP32",
+      "parts": [
+        {
+          "path": "m5-3c-esp32/m5-3c-esp32.bin",
+          "offset": 0
+        }
+      ]
+    },
+    {
+      "chipFamily": "ESP32",
+      "parts": [
+        {
           "path": "nspanel-esp32/nspanel-esp32.bin",
           "offset": 0
         }
