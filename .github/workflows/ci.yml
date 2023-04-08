@@ -11,7 +11,9 @@ jobs:
       matrix:
         file:
           - nspanel.yaml
-#          - project-template-esp8266.yaml
+          - switchman-m5-1c.yaml
+          - switchman-m5-2c.yaml
+          - switchman-m5-3c.yaml                    
     steps:
       - name: Checkout source code
         uses: actions/checkout@v2
