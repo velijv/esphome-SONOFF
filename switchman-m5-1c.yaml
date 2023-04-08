@@ -62,10 +62,10 @@ api:
           }          
   - service: stop_scan
     then:
-      - id(${device_name}_esp32_ble_tracker).stop_scan
+      - esp32_ble_tracker.stop_scan
   - service: start_scan
     then:
-      - id(${device_name}_esp32_ble_tracker).start_scan
+      - esp32_ble_tracker.start_scan
 
 # OTA is required for Over-the-Air updating
 ota:
