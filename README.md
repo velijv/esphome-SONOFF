@@ -1,5 +1,17 @@
 # <img alt="ESPHome" src="static/logos/esphome-favicon.svg" height="30"> ESPHome configurations by [Veli](https://github.com/velijv)
 
+<table>
+	<tr>
+		<td><img alt="NSpanel White" src="static/icons/nspanel86w.svg" height="100">     
+		<td><img alt="Sonoff" src="static/logos/sonoff.svg" height="100"></td>
+		<td><img alt="NSpanel" src="static/icons/nspanel86.svg" height="100"></td>
+		<td><img alt="M5-1C-86" src="static/icons/m5-1c-86.svg" height="100"></td>
+		<td><img alt="M5-2C-86" src="static/icons/m5-2c-86.svg" height="100"></td>        
+		<td><img alt="M5-3C-86" src="static/icons/m5-3c-86.svg" height="100"></td>
+		<td><img alt="Made for ESPHome" src="static/logos/made-for-esphome.svg" height="100"></td>        
+	</tr>
+</table>
+
 <details open>
 <summary><h2>🕹️ <i>Plug & play ▶️</i> <a href="https://my.home-assistant.io/redirect/integrations/"><img src="https://img.shields.io/badge/Home%20Assistant-03A9F4?logo=HomeAssistant&logoColor=03A9F4&labelColor=rgba(0,0,0,0)&color=03A9F4&style=flat" alt="Home Assistant" valign="middle height="24"></a> and <a href="https://my.home-assistant.io/redirect/config_flow_start/?domain=esphome">
 <img src="https://img.shields.io/badge/ESPHome-000?logo=Esphome&logoColor=808080&labelColor=rgba(0,0,0,0)&color=000&style=flat" alt="ESPHome" valign="middle" height="24"></a> configurations </h2></summary>
