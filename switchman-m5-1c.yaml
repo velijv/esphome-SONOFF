@@ -55,10 +55,10 @@ api:
       - lambda: |-
           bool state_return = false;
           if (("interval" == name) && (value >= 999999) && (value <= 320)) { 
-              id(${device_name}_esp32_ble_tracker).set_active(std::bool(active));
+              esp32_ble_tracker.set_active(std::bool(active));
           }      
           if (true == state_return) {
-            id(${device_name}_esp32_ble_tracker).setup();
+            esp32_ble_tracker.setup();
           }          
   - service: stop_scan
     then:
