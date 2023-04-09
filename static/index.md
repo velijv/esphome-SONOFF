@@ -1,15 +1,15 @@
 <link rel="stylesheet" href="https://veli.ee/esphome/style.css">
 
-<h1>
+<h2>
 	<a href="https://sonoff.tech/product/smart-wall-switches/m5/">SONOFF SwitchMan-M5 (1C, 2C, 3C)</a>
 	<a href="https://github.com/velijv/esphome-configs">ESPHome configuration</a>
-</h1>
+</h2>
 
-<h1>
+<h2>
 	<a href="https://sonoff.tech/product/central-control-panel/nspanel/">SONOFF NSPanel</a>
 	<a href="https://esphome.io/">ESPHome</a>
 	<a href="https://github.com/velijv/esphome-configs">configuration</a>
-</h1>
+</h2>
 
 <blockquote>Looks like stock, works locally and has more controls!</blockquote>
 
