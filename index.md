@@ -1,3 +1,5 @@
+<link rel="stylesheet" href="https://veli.ee/esphome/style.css">
+
 <h1>
 	<a href="https://sonoff.tech/product/smart-wall-switches/m5/">SONOFF SwitchMan-M5 (1C, 2C, 3C)</a>
 	<a href="https://github.com/velijv/esphome-configs">ESPHome configuration</a>
@@ -73,8 +75,10 @@
 
 <blockquote> You can use the button below to install the pre-built firmware directly to your device via USB from the browser. </blockquote>
 
+<center>
 <esp-web-install-button manifest="./manifest.json"></esp-web-install-button>
 <script type="module" src="https://unpkg.com/esp-web-tools@9.1.0/dist/web/install-button.js?module"></script>
+</center>
 
 <hr>
 
