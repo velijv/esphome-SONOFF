@@ -166,12 +166,18 @@ binary_sensor:
       then:
         - cover.close: shade
     on_multi_click:
-      - timing: !include common/click/double.yaml
+      - timing:
+          - ON for at most 1s
+          - OFF for at most 0.3s
+          - ON for at most 1s
+          - OFF for at least 0.2s
         then: 
           - cover.control:
               id: shade
               position: 25%
-      - timing: !include common/click/single.yaml      
+      - timing:
+          - ON for at most 1s
+          - OFF for at least 0.5s
         then:           
           - cover.close: shade          
 
