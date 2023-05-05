@@ -11,6 +11,6 @@ jobs:
     with:
       # CHANGEME: Set the filenames of your config files here:
       #files: project-template-esp32.yaml,project-template-esp8266.yaml
-      files: nspanel.yaml,switchman-m5-1c.yaml,switchman-m5-2c.yaml,switchman-m5-3c.yaml
+      files: nspanel.yaml,switchman-m5-1c.yaml,switchman-m5-2c.yaml,switchman-m5-3c.yaml,zemismart-rollershade.yaml
       # CHANGEME: Set the name of your project here:
       name: NSPanel 

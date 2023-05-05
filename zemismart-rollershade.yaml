@@ -1,0 +1,230 @@
+# These substitutions allow the end user to override certain values
+substitutions:
+  device_description: 'Zemismart WF25S Roller Shade' # https://www.aliexpress.com/item/33012061596.html
+  friendly_name: 'Shade'
+  device_name: shade
+  project_base: 'Zemismart'
+  project_name: 'Roller Shade'
+  project_version: 'WF25S'
+
+esphome:
+  name: $device_name
+  friendly_name: $friendly_name
+  comment: $device_description
+  # This will allow for (future) project identification,
+  # configuration and updates.  
+  project:
+    name: ${project_base}.${project_name}
+    version: $project_version
+  # Automatically add the mac address to the name
+  # so you can use a single firmware for all devices
+  name_add_mac_suffix: true
+
+esp8266:
+  board: esp01_1m
+  restore_from_flash: true
+
+# To be able to get logs from the device via serial and api.
+logger:
+
+# API is a requirement of the dashboard import.
+api:
+
+# OTA is required for Over-the-Air updating
+ota:
+
+# This should point to the public location of this yaml file.
+dashboard_import:
+  package_import_url: github://velijv/esphome-configs/zemismart-rollershade.yaml@main
+
+wifi:
+  # Set up a wifi access point using the device name above
+  ap:
+    password: "12345678"
+
+# In combination with the `ap` this allows the user
+# to provision wifi credentials to the device.
+captive_portal:
+
+
+##########################################################
+# Most projects should not remove anything from above here
+# and should just modify the name, project name/version 
+# and git url for the dashboard_import
+##########################################################
+
+
+# Sets up the improv via serial client for Wi-Fi provisioning.
+# Handy if your device has a usb port for the user to add credentials when they first get it.
+improv_serial:
+  next_url: https://veli.ee/esphome?device_name={{device_name}}&ip_address={{ip_address}}&esphome_version={{esphome_version}}  
+
+##########################################################
+# Hardware config starts here
+# GPIO12 - button down
+# GPIO13 - motor down
+# GPIO05 - button up
+# GPIO0 (RX) - box status led 
+# GPIO2 - ESP_status_led
+# GPIO15 - motor up
+# GPIO3 - button stop
+##########################################################
+# implanted esp01_1m leaves free gpios for other stuff
+# GPIO01 - TXD
+# GPIO04 - SDA
+# GPIO14 - SCLK
+##########################################################
+
+switch: 
+  - platform: gpio
+    pin: GPIO13
+    id: ${device_name}_switch_down
+    name: Mode Down    
+    interlock: ${device_name}_switch_up # https://esphome.io/components/switch/gpio.html#switch-gpio-interlocking
+    interlock_wait_time: 200ms
+    internal: true
+    restore_mode: ALWAYS_OFF
+
+  - platform: gpio
+    pin: GPIO15
+    id: ${device_name}_switch_up
+    name: Mode Up
+    interlock: ${device_name}_switch_down
+    interlock_wait_time: 200ms    
+    internal: true    
+    restore_mode: ALWAYS_OFF    
+
+button:
+  - platform: template
+    name: Stop
+    id: ${device_name}_stop
+    internal: true    
+    on_press:
+      - switch.turn_off: ${device_name}_switch_down
+      - switch.turn_off: ${device_name}_switch_up
+
+cover:
+  - platform: time_based
+    name: None
+    device_class: shade 
+    id: shade
+    open_action:
+      - switch.turn_on: ${device_name}_switch_up
+      - light.turn_on: ${device_name}_box_status_led
+    open_duration: 26s
+    close_action:
+      - switch.turn_on: ${device_name}_switch_down
+      - light.turn_on: ${device_name}_box_status_led
+    close_duration: 24s
+    stop_action:
+      - button.press: ${device_name}_stop
+      - light.turn_off: ${device_name}_box_status_led
+#    has_built_in_endstop: true # has no built in endstop afaik
+    on_closed:
+      - logger.log: "Cover is CLOSED!"
+    on_open:
+      - logger.log: "Cover is OPEN!"          
+
+output:
+  - id: led
+    platform: gpio
+    pin: 
+      number: GPIO0
+      inverted: true
+
+light:
+  - platform: status_led
+    name: LED ESP12-F Status
+    id: ${device_name}_esp_status_led    
+    icon: mdi:led-on
+    entity_category: diagnostic
+    disabled_by_default: true    
+    restore_mode: ALWAYS_OFF
+    pin: 
+      number: GPIO02
+      inverted: true
+
+  - platform: binary
+    name: LED on Box # color is red + (always on blue) = purple
+    id: ${device_name}_box_status_led 
+    icon: mdi:led-off
+    entity_category: diagnostic
+    disabled_by_default: true    
+    restore_mode: ALWAYS_OFF  
+    output: led
+
+binary_sensor:
+  - platform: gpio
+    pin: 
+      number: GPIO12
+      inverted: true
+    id: ${device_name}_sensor_down
+    entity_category: diagnostic
+    icon: mdi:blinds
+    name: Down
+    on_press:
+      then:
+        - cover.close: shade
+    on_multi_click:
+      - timing: !include common/click/double.yaml
+        then: 
+          - cover.control:
+              id: shade
+              position: 25%
+      - timing: !include common/click/single.yaml      
+        then:           
+          - cover.close: shade          
+
+  - platform: gpio
+    pin: 
+      number: GPIO05
+      inverted: true      
+    id: ${device_name}_sensor_up
+    entity_category: diagnostic    
+    icon: mdi:blinds-open    
+    name: Up
+    on_press:
+      then:
+        - cover.open: shade    
+    on_multi_click:
+      - timing:
+          - ON for at most 1s
+          - OFF for at least 0.5s
+        then: 
+          - cover.open: shade      
+      - timing:
+          - ON for at most 1s
+          - OFF for at most 0.3s
+          - ON for at most 1s
+          - OFF for at least 0.2s
+        then:           
+          - cover.control:
+              id: shade
+              position: 75%          
+
+  - platform: gpio
+    pin: 
+      number: GPIO3
+      inverted: true      
+    entity_category: diagnostic
+    icon: mdi:stop
+    id: ${device_name}_sensor_stop
+    name: Stop
+    on_press:
+      then:
+        - cover.stop: shade        
+    on_multi_click:
+      - timing:
+          - ON for at most 1s
+          - OFF for at least 0.5s
+        then: 
+          - cover.stop: shade      
+      - timing:
+          - ON for at most 1s
+          - OFF for at most 0.3s
+          - ON for at most 1s
+          - OFF for at least 0.2s
+        then:           
+          - cover.control:
+              id: shade
+              position: 50%        
