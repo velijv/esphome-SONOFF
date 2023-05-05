@@ -39,6 +39,15 @@
           "offset": 0
         }
       ]
+    },
+    {
+      "chipFamily": "ESP8266",
+      "parts": [
+        {
+          "path": "shade-esp8266/shade-esp8266.bin",
+          "offset": 0
+        }
+      ]
     }
   ]
 }
