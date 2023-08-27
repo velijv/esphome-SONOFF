@@ -33,9 +33,6 @@
 		<td>
 			<img alt="M5-3C-86" src="https://raw.githubusercontent.com/velijv/esphome-configs/main/static/icons/m5-3c-86.svg" height="100">
 		</td>
-		<td>
-			<img alt="Made for ESPHome" src="https://raw.githubusercontent.com/velijv/esphome-configs/main/static/logos/made-for-esphome.svg" height="100">
-		</td>
 	</tr>
 </table>
 
@@ -94,7 +91,7 @@
 <img src="https://raw.githubusercontent.com/velijv/esphome-configs/main/static/screens/homeassistant-device.jpeg" alt="Home Assistant Device">
 </details>
 
-<details>
+<details open>
 <summary><b>🤜🏻 Attributions</b></summary>
 
 <ul>
