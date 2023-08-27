@@ -8,7 +8,6 @@
 		<td><img alt="M5-1C-86" src="static/icons/m5-1c-86.svg" height="100"></td>
 		<td><img alt="M5-2C-86" src="static/icons/m5-2c-86.svg" height="100"></td>        
 		<td><img alt="M5-3C-86" src="static/icons/m5-3c-86.svg" height="100"></td>
-		<td><img alt="Made for ESPHome" src="static/logos/made-for-esphome.svg" height="100"></td>        
 	</tr>
 </table>
 
