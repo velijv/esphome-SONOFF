@@ -176,6 +176,7 @@ switch:
     id: ${device_name}_switch_left
     pin:
       number: 23
+      allow_other_uses: true
 
   - platform: gpio
     name: Center
@@ -183,6 +184,7 @@ switch:
     id: ${device_name}_switch_center
     pin:
       number: 19
+      allow_other_uses: true
     on_turn_on:
       light.turn_on: ${device_name}_led_center
     on_turn_off:
@@ -194,6 +196,7 @@ switch:
     id: ${device_name}_switch_right
     pin:
       number: 22
+      allow_other_uses: true
     on_turn_on:
       light.turn_on: ${device_name}_led_right
     on_turn_off:
@@ -206,20 +209,28 @@ output:
     id: red_output
 
   - platform: ledc
-    pin: 5
+    pin:
+      number: 5
+      allow_other_uses: true
     frequency: 1000 Hz
     id: blue_output
 
   - platform: gpio
-    pin: 23
+    pin:
+      number: 23
+      allow_other_uses: true
     id: ${device_name}_output_led_left
 
   - platform: gpio
-    pin: 19
+    pin:
+      number: 19
+      allow_other_uses: true
     id: ${device_name}_output_led_center
 
   - platform: gpio
-    pin: 22
+    pin:
+      number: 22
+      allow_other_uses: true
     id: ${device_name}_output_led_right
 
 light:
@@ -244,6 +255,7 @@ light:
     pin:
       number: 5
       inverted: true
+      allow_other_uses: true
 # individual red LEDs
   - platform: binary
     id: ${device_name}_led_left
