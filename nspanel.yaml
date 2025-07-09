@@ -117,6 +117,7 @@ api:
 
 # OTA is required for Over-the-Air updating
 ota:
+  platform: esphome
 
 # This should point to the public location of this yaml file.
 dashboard_import:
@@ -172,10 +173,9 @@ improv_serial:
 # the NSPanel component: 
 #################################################################################################
 
-# https://github.com/esphome/esphome/pull/2702
-
+# Fetch NSPanel component from the related ESPHome pull request
 external_components:
-  - source: github://pr#2702
+  - source: "github://pr#2702"
     components: ["nspanel"]
     refresh: 0s
 
@@ -549,7 +549,6 @@ switch:
     id: ${device_name}_climate_screensave
     icon: mdi:thermostat
 #    entity_category: config
-    restore_state: false
     optimistic: true
     restore_mode: ALWAYS_OFF
     on_turn_on: 
@@ -565,7 +564,6 @@ switch:
     id: ${device_name}_eco_mode
     icon: mdi:leaf
     entity_category: config
-    restore_state: true
     optimistic: true
     restore_mode: RESTORE_DEFAULT_ON
 
@@ -575,7 +573,6 @@ switch:
     entity_category: config
     icon: mdi:arrow-left-box    
     optimistic: true
-    restore_state: true
     restore_mode: RESTORE_DEFAULT_OFF
     turn_on_action: 
       lambda: |-
@@ -590,7 +587,6 @@ switch:
     entity_category: config
     icon: mdi:arrow-right-box    
     optimistic: true
-    restore_state: true
     restore_mode: RESTORE_DEFAULT_OFF
     turn_on_action: 
       lambda: |-

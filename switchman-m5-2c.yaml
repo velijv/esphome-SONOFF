@@ -55,6 +55,7 @@ api:
 
 # OTA is required for Over-the-Air updating
 ota:
+  platform: esphome
 
 # This should point to the public location of this yaml file.
 dashboard_import:
@@ -173,13 +174,14 @@ output:
     pin: 18
     frequency: 1000 Hz
     id: red_output
-  - platform: ledc
-    pin: 5
-    frequency: 1000 Hz
-    id: blue_output
   - platform: gpio
     pin: 22
     id: ${device_name}_output_led_right
+
+status_led:
+  pin:
+    number: 5
+    inverted: true
 
 light:
 # Red LED (for both relays, can't be split...)
@@ -194,20 +196,11 @@ light:
     effects:
       - pulse:
       - strobe:
-# Blue led for status
-  - platform: status_led
-    name: LED (blue)
-    id: ${device_name}_led_status
-    icon: mdi:led-outline
-    entity_category: config
-    pin:
-      number: 5
-      inverted: true
+# Blue led for status handled via status_led component
 # right led
   - platform: binary
     id: ${device_name}_led_right
     name: LED (right)
     output: ${device_name}_output_led_right
     restore_mode: ALWAYS_OFF
-    icon: mdi:led-outline
-    entity_category: config        
+    icon: mdi:led-outline    entity_category: config        
