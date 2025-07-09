@@ -56,6 +56,7 @@ api:
 
 # OTA is required for Over-the-Air updating
 ota:
+  platform: esphome
 
 # This should point to the public location of this yaml file.
 dashboard_import:
@@ -123,7 +124,7 @@ binary_sensor:
                 service: homeassistant.toggle
                 data:
                   entity_id: $hass_device_1
-            - light.toggle: ${device_name}_led_left
+            #- light.toggle: ${device_name}_led_left
           else:
             - switch.toggle: ${device_name}_switch_left
 
@@ -144,7 +145,7 @@ binary_sensor:
                 service: homeassistant.toggle
                 data:
                   entity_id: $hass_device_2
-            - light.toggle: ${device_name}_led_center
+            #- light.toggle: ${device_name}_led_center
           else:
             - switch.toggle:  ${device_name}_switch_center
 
@@ -165,7 +166,7 @@ binary_sensor:
                 service: homeassistant.toggle
                 data:
                   entity_id: $hass_device_3
-            - light.toggle: ${device_name}_led_right
+            #- light.toggle: ${device_name}_led_right
           else:
             - switch.toggle:  ${device_name}_switch_right
 
@@ -176,7 +177,6 @@ switch:
     id: ${device_name}_switch_left
     pin:
       number: 23
-      allow_other_uses: true
 
   - platform: gpio
     name: Center
@@ -184,11 +184,8 @@ switch:
     id: ${device_name}_switch_center
     pin:
       number: 19
-      allow_other_uses: true
-    on_turn_on:
-      light.turn_on: ${device_name}_led_center
-    on_turn_off:
-      light.turn_off: ${device_name}_led_center
+    on_turn_on: []
+    on_turn_off: []
 
   - platform: gpio
     name: Right
@@ -196,11 +193,8 @@ switch:
     id: ${device_name}_switch_right
     pin:
       number: 22
-      allow_other_uses: true
-    on_turn_on:
-      light.turn_on: ${device_name}_led_right
-    on_turn_off:
-      light.turn_off: ${device_name}_led_right
+    on_turn_on: []
+    on_turn_off: []
 
 output:
   - platform: ledc
@@ -208,30 +202,12 @@ output:
     frequency: 1000 Hz
     id: red_output
 
-  - platform: ledc
-    pin:
-      number: 5
-      allow_other_uses: true
-    frequency: 1000 Hz
-    id: blue_output
 
-  - platform: gpio
-    pin:
-      number: 23
-      allow_other_uses: true
-    id: ${device_name}_output_led_left
 
-  - platform: gpio
-    pin:
-      number: 19
-      allow_other_uses: true
-    id: ${device_name}_output_led_center
-
-  - platform: gpio
-    pin:
-      number: 22
-      allow_other_uses: true
-    id: ${device_name}_output_led_right
+status_led:
+  pin:
+    number: 5
+    inverted: true
 
 light:
 # RED LEDs
@@ -245,38 +221,4 @@ light:
     entity_category: config
     effects:
       - pulse:
-      - strobe:
-# Blue led for status
-  - platform: status_led
-    name: LED (blue)
-    id: ${device_name}_led_status
-    icon: mdi:led-outline
-    entity_category: config
-    pin:
-      number: 5
-      inverted: true
-      allow_other_uses: true
-# individual red LEDs
-  - platform: binary
-    id: ${device_name}_led_left
-    name: LED (left)
-    output: ${device_name}_output_led_left
-    restore_mode: ALWAYS_OFF
-    icon: mdi:led-outline
-    entity_category: config
-
-  - platform: binary
-    id: ${device_name}_led_center
-    name: LED (center)
-    output: ${device_name}_output_led_center
-    restore_mode: ALWAYS_OFF
-    icon: mdi:led-outline
-    entity_category: config
-
-  - platform: binary
-    id: ${device_name}_led_right
-    name: LED (right)
-    output: ${device_name}_output_led_right
-    restore_mode: ALWAYS_OFF
-    icon: mdi:led-outline
-    entity_category: config    
+      - strobe:# Blue led for status handled via status_led component
